@@ -1,5 +1,5 @@
 -- Create database
-CREATE DATABASE proyectof2nix;
+CREATE DATABASE IF NOT EXISTS proyectof2nix;
 USE proyectof2nix;
 
 -- Articles table
@@ -10,6 +10,7 @@ CREATE TABLE articles (
     summary TEXT NOT NULL,
     image_url VARCHAR(255),
     video_url VARCHAR(255),
+    pdf_url VARCHAR(255),
     category VARCHAR(100) NOT NULL,
     author VARCHAR(100),
     date_published DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -28,7 +29,7 @@ CREATE TABLE categories (
 -- Users table (for admin access)
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
+    username VARCHAR(50) NOT NULL,
     password VARCHAR(255) NOT NULL,
     email VARCHAR(100) NOT NULL,
     role ENUM('admin', 'editor') NOT NULL DEFAULT 'editor',
@@ -44,6 +45,17 @@ INSERT INTO categories (name, slug) VALUES
 ('Sports', 'sports'),
 ('Events', 'events');
 
--- Insert admin user (password: admin123)
-INSERT INTO users (username, password, email, role) VALUES
-('admin', SHA2('contraseña', 256), 'admin@university.edu', 'admin');
+-- Create directories if they don't exist
+-- Note: This is a reminder for manual creation, as SQL can't create directories
+-- Create these directories after setting up the database:
+-- /uploads/
+-- /uploads/pdfs/
+
+-- Sample article (optional)
+INSERT INTO articles (title, content, summary, category, author, featured) VALUES
+('Welcome to Proyecto Fenix', 
+'Welcome to our new university news platform. This is a sample article to get you started.', 
+'Welcome to our new university news platform.',
+'campus',
+'Admin',
+true);
