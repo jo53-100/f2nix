@@ -105,6 +105,21 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Handle video URL
     $video_url = clean_input($_POST['video_url']);
+    if (!empty($video_url)) {
+        // Handle YouTube URLs
+        if (preg_match('/(?:youtube\.com\/(?:[^\/\n\s]+\/\s*(?:\w*\/)*(?:v\/|e(?:mbed)?)\/|\w*\/|watch\?[^&]*v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/', $video_url, $matches)) {
+            $video_id = $matches[1];
+            $video_url = "https://www.youtube.com/embed/" . $video_id;
+        }
+        // Handle Instagram URLs
+        elseif (preg_match('/instagram\.com\/(?:p|reel)\/([A-Za-z0-9_-]+)/', $video_url, $matches)) {
+            $post_id = $matches[1];
+            // Use oEmbed format
+            $video_url = "https://www.instagram.com/p/" . $post_id . "/embed/captioned/";
+        } else {
+            $error = "Please enter a valid YouTube or Instagram URL";
+        }
+    }
 
     if(empty($title) || empty($content) || empty($summary) || empty($category)) {
         $error = "Title, content, summary, and category are required";
@@ -243,9 +258,9 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-group">
-                <label for="video_url">Video URL (optional):</label>
+                <label for="video_url">Video/Social Media URL (optional):</label>
                 <input type="url" id="video_url" name="video_url" value="<?= htmlspecialchars($article['video_url']) ?>">
-                <small>Enter YouTube or Vimeo embed URL.</small>
+                <small>Enter a YouTube URL (e.g., youtube.com/watch?v=xxxxx) or Instagram post/reel URL (e.g., instagram.com/p/xxxxx or instagram.com/reel/xxxxx)</small>
             </div>
 
             <div class="form-group checkbox">

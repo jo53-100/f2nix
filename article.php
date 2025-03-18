@@ -75,9 +75,31 @@ $related_result = $related_stmt->get_result();
         <?php endif; ?>
 
         <?php if(!empty($article['video_url'])): ?>
-            <div class="video-container">
-                <iframe src="<?= htmlspecialchars($article['video_url']) ?>" frameborder="0" allowfullscreen></iframe>
-            </div>
+            <?php if(strpos($article['video_url'], 'instagram.com') !== false): ?>
+                <div class="instagram-container">
+                    <iframe 
+                        src="<?= htmlspecialchars($article['video_url']) ?>" 
+                        frameborder="0"
+                        scrolling="no"
+                        allowtransparency="true"
+                        allowfullscreen="true"
+                        width="100%"
+                        height="100%"
+                        style="background: white;">
+                    </iframe>
+                </div>
+            <?php else: ?>
+                <div class="video-container">
+                    <iframe 
+                        src="<?= htmlspecialchars($article['video_url']) ?>" 
+                        frameborder="0" 
+                        allowfullscreen
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        width="100%"
+                        height="100%">
+                    </iframe>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
 
         <?php if(!empty($article['pdf_url'])): ?>

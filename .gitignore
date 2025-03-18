@@ -1,18 +1,30 @@
 # IDE files
 .idea/
+.vscode/
 
 # Environment files
 .env
+*.env
+!.env.example
 
 # Uploaded files
 uploads/*
 !uploads/.gitkeep
 
-# Vendor directory (if using Composer)
-/vendor/
+# Backup files
+backup_files/
+*.bak
+*.backup
 
 # Cache files
 *.cache
 
 # Log files
-*.log 
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Vendor directory (if using Composer)
+/vendor/ 
