@@ -5,5 +5,6 @@
         </div>
     </div>
 </footer>
+    </div><!-- End of site-wrapper -->
 </body>
 </html>

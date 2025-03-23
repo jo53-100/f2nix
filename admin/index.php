@@ -10,9 +10,11 @@ if(!is_logged_in()) {
 }
 
 // Get articles
-$query = "SELECT a.*, c.name as category_name
+$query = "SELECT a.*, GROUP_CONCAT(c.name) as category_name
           FROM articles a
-          JOIN categories c ON a.category = c.slug
+          LEFT JOIN article_categories ac ON a.id = ac.article_id
+          LEFT JOIN categories c ON ac.category_slug = c.slug
+          GROUP BY a.id
           ORDER BY a.date_published DESC";
 $result = $conn->query($query);
 ?>
@@ -33,6 +35,7 @@ $result = $conn->query($query);
                     <ul>
                         <li><a href="../index.php">View Site</a></li>
                         <li><a href="add_article.php">Add Article</a></li>
+                        <li><a href="manage_categories.php">Manage Categories</a></li>
                         <li><a href="logout.php">Logout</a></li>
                     </ul>
                 </nav>

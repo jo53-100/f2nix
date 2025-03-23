@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = clean_input($_POST['title']);
     $content = clean_input($_POST['content']);
     $summary = clean_input($_POST['summary']);
-    $category = clean_input($_POST['category']);
+    $categories = isset($_POST['categories']) ? $_POST['categories'] : [];
     $author = clean_input($_POST['author']);
     $featured = isset($_POST['featured']) ? 1 : 0;
 
@@ -84,33 +84,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle Instagram URLs
         elseif (preg_match('/instagram\.com\/(?:p|reel)\/([A-Za-z0-9_-]+)/', $video_url, $matches)) {
             $post_id = $matches[1];
-            // Use oEmbed format
             $video_url = "https://www.instagram.com/p/" . $post_id . "/embed/captioned/";
         } else {
             $error = "Please enter a valid YouTube or Instagram URL";
         }
     }
 
-    if (empty($title) || empty($content) || empty($summary) || empty($category)) {
-        $error = "Title, content, summary, and category are required.";
+    if (empty($title) || empty($content) || empty($summary) || empty($categories)) {
+        $error = "Title, content, summary, and at least one category are required.";
     } else {
-        // Insert article
-        $query = "INSERT INTO articles (title, content, summary, image_url, video_url, pdf_url, category, author, featured)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("ssssssssi", $title, $content, $summary, $image_url, $video_url, $pdf_url, $category, $author, $featured);
-
-        if ($stmt->execute()) {
-            $success = "Article added successfully.";
-            // Clear form data
-            $title = $content = $summary = $category = $author = $video_url = '';
-            $featured = 0;
-        } else {
-            error_log("Database error: " . $stmt->error);
+        // Start transaction
+        $conn->begin_transaction();
+        
+        try {
+            // Insert article
+            $query = "INSERT INTO articles (title, content, summary, image_url, video_url, pdf_url, author, featured)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("sssssssi", $title, $content, $summary, $image_url, $video_url, $pdf_url, $author, $featured);
+            
+            if ($stmt->execute()) {
+                $article_id = $conn->insert_id;
+                
+                // Insert categories
+                $cat_query = "INSERT INTO article_categories (article_id, category_slug) VALUES (?, ?)";
+                $cat_stmt = $conn->prepare($cat_query);
+                
+                foreach ($categories as $category_slug) {
+                    $cat_stmt->bind_param("is", $article_id, $category_slug);
+                    if (!$cat_stmt->execute()) {
+                        throw new Exception("Error inserting category: " . $cat_stmt->error);
+                    }
+                }
+                
+                $conn->commit();
+                $success = "Article added successfully.";
+                // Clear form data
+                $title = $content = $summary = $author = $video_url = '';
+                $featured = 0;
+                $categories = [];
+            } else {
+                throw new Exception("Error inserting article: " . $stmt->error);
+            }
+        } catch (Exception $e) {
+            $conn->rollback();
+            error_log("Database error: " . $e->getMessage());
             $error = "An error occurred while saving the article. Please try again.";
         }
-
-        $stmt->close();
     }
 }
 ?>
@@ -119,14 +139,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Article - University News</title>
+    <title>Add Article - Admin</title>
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
     <header class="admin-header">
         <div class="container">
             <div class="header-content">
-                <div class="logo">University News Admin</div>
+                <div class="logo">Admin Panel</div>
                 <nav>
                     <ul>
                         <li><a href="index.php">Dashboard</a></li>
@@ -152,8 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST" action="" enctype="multipart/form-data" class="article-form">
             <div class="form-group">
                 <label for="title">Title:</label>
-                <input type="text" id="title" name="title" value="<?= isset($title) ? htmlspecialchars($title) : '' ?>" required aria-describedby="title-help">
-                <small id="title-help">Enter the article title.</small>
+                <input type="text" id="title" name="title" value="<?= isset($title) ? htmlspecialchars($title) : '' ?>" required>
             </div>
 
             <div class="form-group">
@@ -168,15 +187,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-group">
-                <label for="category">Category:</label>
-                <select id="category" name="category" required>
-                    <option value="">Select Category</option>
+                <label>Categories:</label>
+                <div class="categories-grid">
                     <?php foreach ($categories as $cat): ?>
-                        <option value="<?= $cat['slug'] ?>" <?= (isset($category) && $category === $cat['slug']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($cat['name']) ?>
-                        </option>
+                        <div class="category-checkbox">
+                            <input type="checkbox" id="cat_<?= $cat['slug'] ?>" 
+                                   name="categories[]" value="<?= $cat['slug'] ?>"
+                                   <?= (isset($categories) && in_array($cat['slug'], $categories)) ? 'checked' : '' ?>>
+                            <label for="cat_<?= $cat['slug'] ?>"><?= htmlspecialchars($cat['name']) ?></label>
+                        </div>
                     <?php endforeach; ?>
-                </select>
+                </div>
             </div>
 
             <div class="form-group">
@@ -193,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label for="video_url">Video/Social Media URL (optional):</label>
                 <input type="url" id="video_url" name="video_url" value="<?= isset($video_url) ? htmlspecialchars($video_url) : '' ?>">
-                <small>Enter a YouTube URL (e.g., youtube.com/watch?v=xxxxx) or Instagram post/reel URL (e.g., instagram.com/p/xxxxx or instagram.com/reel/xxxxx)</small>
+                <small>Enter a YouTube URL or Instagram post/reel URL</small>
             </div>
 
             <div class="form-group">
@@ -213,11 +234,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </form>
     </main>
-
-    <footer class="admin-footer">
-        <div class="container">
-            <p>&copy; <?= date('Y') ?> University News Admin. All rights reserved.</p>
-        </div>
-    </footer>
 </body>
 </html>

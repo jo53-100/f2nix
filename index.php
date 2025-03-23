@@ -6,10 +6,17 @@ $current_page = 'home';
 include 'includes/config.php';
 include 'includes/db_connect.php';
 
-// Get recent articles
-$query = "SELECT id, title, image_url, video_url, date_published, summary, category 
-          FROM articles 
-          ORDER BY date_published DESC 
+// Get recent articles with faculty and category information
+$query = "SELECT DISTINCT a.id, a.title, a.image_url, a.video_url, a.date_published, a.summary,
+          GROUP_CONCAT(DISTINCT c.name ORDER BY c.name ASC SEPARATOR '||') as category_names,
+          GROUP_CONCAT(DISTINCT c.slug ORDER BY c.name ASC SEPARATOR '||') as category_slugs,
+          f.name as faculty_name, f.slug as faculty_slug
+          FROM articles a 
+          LEFT JOIN article_categories ac ON a.id = ac.article_id
+          LEFT JOIN categories c ON ac.category_slug = c.slug
+          LEFT JOIN faculties f ON c.faculty_id = f.id
+          GROUP BY a.id
+          ORDER BY a.date_published DESC 
           LIMIT 6";
 $result = mysqli_query($conn, $query);
 
@@ -21,6 +28,13 @@ if (!$result) {
 // Include the header
 include 'includes/header.php';
 ?>
+
+<section class="hero">
+    <div class="container">
+        <h1>Últimas Actualizaciones</h1>
+        <p>Las publicaciones más recientes de todas las facultades</p>
+    </div>
+</section>
 
 <main class="container">
     <div class="news-grid">
@@ -53,15 +67,36 @@ include 'includes/header.php';
                 // Add content
                 echo '<div class="news-content">';
                 echo '<h2>' . htmlspecialchars($article['title']) . '</h2>';
-                echo '<div class="date">' . $formatted_date . '</div>';
+                echo '<div class="article-meta">';
+                echo '<span class="date">' . $formatted_date . '</span>';
+                
+                if (!empty($article['faculty_name'])) {
+                    echo ' · <span class="faculty"><a href="faculty.php?slug=' . htmlspecialchars($article['faculty_slug']) . 
+                         '">' . htmlspecialchars($article['faculty_name']) . '</a></span>';
+                }
+                
+                // Handle multiple categories
+                if (!empty($article['category_names'])) {
+                    $category_names = explode('||', $article['category_names']);
+                    $category_slugs = explode('||', $article['category_slugs']);
+                    echo ' · <span class="categories">';
+                    for ($i = 0; $i < count($category_names); $i++) {
+                        if ($i > 0) echo ', ';
+                        echo '<a href="category.php?slug=' . htmlspecialchars($category_slugs[$i]) . '">' . 
+                             htmlspecialchars($category_names[$i]) . '</a>';
+                    }
+                    echo '</span>';
+                }
+                
+                echo '</div>';
                 echo '<p>' . htmlspecialchars($article['summary']) . '</p>';
                 
-                $link_text = $has_video ? 'Watch Video' : 'Read More';
+                $link_text = $has_video ? 'Ver Video' : 'Leer Más';
                 echo '<a href="article.php?id=' . $article['id'] . '" class="read-more">' . $link_text . '</a>';
                 echo '</div></div>';
             }
         } else {
-            echo '<p>No articles found. Please add some articles to your database.</p>';
+            echo '<p class="no-articles">No hay artículos disponibles en este momento.</p>';
         }
         ?>
     </div>

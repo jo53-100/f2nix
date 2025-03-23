@@ -11,20 +11,22 @@
     <script src="<?= SITE_URL ?>/assets/js/main.js" defer></script>
 </head>
 <body>
-    <?php
-    // Get the current page name for active state
-    $current_page = basename($_SERVER['PHP_SELF']);
-    ?>
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <div class="logo">Proyecto Fenix</div>
-                <nav>
-                    <ul>
-                        <li><a href="<?= SITE_URL ?>/index.php" <?= $current_page == 'index.php' ? 'class="active"' : '' ?>>Noticias</a></li>
-                        <li><a href="<?= SITE_URL ?>/about.php" <?= $current_page == 'about' ? 'class="active"' : '' ?>>¿Quiénes somos?</a></li>
-                    </ul>
-                </nav>
+    <div class="site-wrapper">
+        <?php
+        // Get the current page name for active state
+        $current_page = basename($_SERVER['PHP_SELF']);
+        ?>
+        <header>
+            <div class="container">
+                <div class="header-content">
+                    <div class="logo">Proyecto Fenix</div>
+                    <nav>
+                        <ul>
+                            <li><a href="<?= SITE_URL ?>/index.php" <?= $current_page == 'index.php' ? 'class="active"' : '' ?>>Noticias</a></li>
+                            <li><a href="<?= SITE_URL ?>/faculties.php" <?= $current_page == 'faculties.php' ? 'class="active"' : '' ?>>Facultades</a></li>
+                            <li><a href="<?= SITE_URL ?>/about.php" <?= $current_page == 'about.php' ? 'class="active"' : '' ?>>¿Quiénes somos?</a></li>
+                        </ul>
+                    </nav>
+                </div>
             </div>
-        </div>
-    </header>
+        </header>

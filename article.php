@@ -15,11 +15,17 @@ $page_title = 'Article';
 include 'includes/config.php';
 include 'includes/db_connect.php';
 
-// Fetch article
-$query = "SELECT a.*, c.name as category_name
+// Fetch article with its categories
+$query = "SELECT a.*, 
+          GROUP_CONCAT(DISTINCT c.name ORDER BY c.name ASC SEPARATOR ', ') as category_names,
+          GROUP_CONCAT(DISTINCT c.slug ORDER BY c.name ASC SEPARATOR ', ') as category_slugs,
+          f.name as faculty_name, f.slug as faculty_slug
           FROM articles a
-          LEFT JOIN categories c ON a.category = c.slug
-          WHERE a.id = ?";
+          LEFT JOIN article_categories ac ON a.id = ac.article_id
+          LEFT JOIN categories c ON ac.category_slug = c.slug
+          LEFT JOIN faculties f ON c.faculty_id = f.id
+          WHERE a.id = ?
+          GROUP BY a.id";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $id);
 $stmt->execute();
@@ -39,14 +45,16 @@ include 'includes/header.php';
 // Increase view count
 increase_view_count($conn, $id);
 
-// Fetch related articles
-$related_query = "SELECT id, title, image_url
-                  FROM articles
-                  WHERE category = ? AND id != ?
-                  ORDER BY date_published DESC
+// Fetch related articles from the same categories
+$related_query = "SELECT DISTINCT a.id, a.title, a.image_url
+                  FROM articles a
+                  JOIN article_categories ac1 ON a.id = ac1.article_id
+                  JOIN article_categories ac2 ON ac1.category_slug = ac2.category_slug
+                  WHERE ac2.article_id = ? AND a.id != ?
+                  ORDER BY a.date_published DESC
                   LIMIT 3";
 $related_stmt = $conn->prepare($related_query);
-$related_stmt->bind_param("si", $article['category'], $id);
+$related_stmt->bind_param("ii", $id, $id);
 $related_stmt->execute();
 $related_result = $related_stmt->get_result();
 ?>
@@ -60,11 +68,26 @@ $related_result = $related_stmt->get_result();
                 <?php if(!empty($article['author'])): ?>
                     <span class="author">Por <?= htmlspecialchars($article['author']) ?></span>
                 <?php endif; ?>
-                <span class="category">
-                    <a href="category.php?slug=<?= $article['category'] ?>">
-                        <?= htmlspecialchars($article['category_name']) ?>
-                    </a>
-                </span>
+                <?php if(!empty($article['category_names'])): ?>
+                    <?php 
+                    $categories = explode(', ', $article['category_names']);
+                    $slugs = explode(', ', $article['category_slugs']);
+                    ?>
+                    <div class="article-categories">
+                        <?php foreach($categories as $index => $category): ?>
+                            <a href="category.php?slug=<?= htmlspecialchars($slugs[$index]) ?>" class="category-badge">
+                                <?= htmlspecialchars($category) ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+                <?php if(!empty($article['faculty_name'])): ?>
+                    <span class="faculty">
+                        <a href="faculty.php?slug=<?= htmlspecialchars($article['faculty_slug']) ?>">
+                            <?= htmlspecialchars($article['faculty_name']) ?>
+                        </a>
+                    </span>
+                <?php endif; ?>
             </div>
         </header>
 
